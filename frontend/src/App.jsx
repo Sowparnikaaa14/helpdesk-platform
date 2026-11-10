@@ -21,7 +21,7 @@ function App() {
         Welcome, {user.name} ({user.role}){" "}
         <button onClick={handleLogout}>Log out</button>
       </p>
-      <Tickets />
+      <Tickets role={user.role}/>
     </div>
   );
 }

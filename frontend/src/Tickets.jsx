@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 const API_URL = "http://localhost:5000/api";
 
-function Tickets() {
+function Tickets({ role }) {
   const [tickets, setTickets] = useState([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -24,7 +24,27 @@ function Tickets() {
       setError("Cannot reach the server");
     }
   }
+    async function updateStatus(id, status) {
+    try {
+      const res = await fetch(`${API_URL}/tickets/${id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
 
+      if (!res.ok) {
+        setError(data.error || "Could not update status");
+        return;
+      }
+      loadTickets();
+    } catch (err) {
+      setError("Cannot reach the server");
+    }
+  }
   useEffect(() => {
     loadTickets();
   }, []);
@@ -109,6 +129,21 @@ function Tickets() {
               <br />
               {t.description}
               {t.category && <> (Category: {t.category})</>}
+                            {(role === "agent" || role === "admin") && (
+                <div style={{ marginTop: 4 }}>
+                  Update status:{" "}
+                  <select
+                    value={t.status}
+                    onChange={(e) => updateStatus(t.id, e.target.value)}
+                  >
+                    <option value="open">Open</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+              )}
             </li>
           ))}
         </ul>
