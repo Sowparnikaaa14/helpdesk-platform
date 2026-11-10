@@ -48,6 +48,23 @@ function Tickets({ role }) {
   useEffect(() => {
     loadTickets();
   }, []);
+    async function assignToMe(id) {
+    try {
+      const res = await fetch(`${API_URL}/tickets/${id}/assign`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Could not assign ticket");
+        return;
+      }
+      loadTickets();
+    } catch (err) {
+      setError("Cannot reach the server");
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -129,6 +146,10 @@ function Tickets({ role }) {
               <br />
               {t.description}
               {t.category && <> (Category: {t.category})</>}
+                              <div style={{ fontSize: 13, color: "#555" }}>
+                Raised by: {t.created_by_name} | Assigned to:{" "}
+                {t.assigned_to_name || "Unassigned"}
+              </div>
                             {(role === "agent" || role === "admin") && (
                 <div style={{ marginTop: 4 }}>
                   Update status:{" "}
@@ -142,6 +163,8 @@ function Tickets({ role }) {
                     <option value="resolved">Resolved</option>
                     <option value="closed">Closed</option>
                   </select>
+                                    {" "}
+                  <button onClick={() => assignToMe(t.id)}>Assign to me</button>
                 </div>
               )}
             </li>

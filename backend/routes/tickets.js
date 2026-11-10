@@ -33,14 +33,21 @@ router.post("/", async (req, res) => {
 // List tickets: employees see their own, agents and admins see all
 router.get("/", async (req, res) => {
   try {
+    const baseQuery = `
+      SELECT t.*, c.name AS created_by_name, a.name AS assigned_to_name
+      FROM tickets t
+      JOIN users c ON t.created_by = c.id
+      LEFT JOIN users a ON t.assigned_to = a.id
+    `;
+
     let result;
     if (req.user.role === "employee") {
       result = await pool.query(
-        "SELECT * FROM tickets WHERE created_by = $1 ORDER BY created_at DESC",
+        baseQuery + " WHERE t.created_by = $1 ORDER BY t.created_at DESC",
         [req.user.id]
       );
     } else {
-      result = await pool.query("SELECT * FROM tickets ORDER BY created_at DESC");
+      result = await pool.query(baseQuery + " ORDER BY t.created_at DESC");
     }
     res.json(result.rows);
   } catch (err) {
@@ -94,5 +101,22 @@ router.patch("/:id/status", requireRole("agent", "admin"), async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+// Assign a ticket to the logged-in agent
+router.patch("/:id/assign", requireRole("agent", "admin"), async (req, res) => {
+  try {
+    const result = await pool.query(
+      "UPDATE tickets SET assigned_to = $1, status = 'assigned', updated_at = NOW() WHERE id = $2 RETURNING *",
+      [req.user.id, req.params.id]
+    );
 
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Ticket not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 module.exports = router;
